@@ -14,12 +14,9 @@ run() ->
 
 run(Reps) ->
     {ok, Conn} = init(),
-    Db = testdb,
+    Tests = [do_noop_inserts, do_single_inserts, do_compound_inserts],
     try
-	Args = [Conn, Db, Reps],
-	do_test(do_noop_inserts, Args),
-	do_test(do_single_inserts, Args),
-	do_test(do_compound_inserts, Args)
+	[do_test(Test, [Conn, testdb, Reps]) || Test <- Tests]
     after
 	cleanup(Conn)
     end.
