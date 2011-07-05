@@ -29,6 +29,7 @@ do_test(F, [_, _, Reps]=A) ->
 do_noop_inserts(_Conn, _Db, Val) when Val =:= 0 ->
     ok;
 do_noop_inserts(Conn, Db, Val) ->
+    ll_generate(Val),
     do_noop_inserts(Conn, Db, Val-1).
 
 do_compound_inserts(Conn, Db, Reps) ->
@@ -59,6 +60,7 @@ do_single_insert(Conn, Db, Val) ->
 	    ).
 
 ll_insert(Val) ->
-    mongo:insert(testcollection, {x,Val, y,<<"foo">>, z,"bar"}).
+    mongo:insert(testcollection, ll_generate(Val)).
 				  
-
+ll_generate(Val) ->
+    {x,Val, y,<<"foo">>, z,"bar"}.
