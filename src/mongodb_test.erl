@@ -14,7 +14,13 @@ run() ->
 
 run(Reps) ->
     {ok, Conn} = init(),
-    Tests = [do_noop_inserts, do_single_inserts, do_compound_inserts],
+    Tests = [
+	     do_noop,
+	     do_async_spawn,
+	     do_sync_spawn,
+	     do_single_inserts,
+	     do_compound_inserts
+	    ],
     try
 	[do_test(Test, [Conn, testdb, Reps]) || Test <- Tests]
     after
@@ -24,13 +30,31 @@ run(Reps) ->
 do_test(F, [_, _, Reps]=A) ->
     io:format("Launching ~p...", [F]),
     {Time, ok} = timer:tc(?MODULE, F, A),
-    io:format("done (~pus, ~pus/op)~n", [Time, Time/Reps]).
+    io:format("done (~p us, ~p us/op, ~p ops/sec)~n", [Time, Time/Reps, Reps/Time*1000000]).
 
-do_noop_inserts(_Conn, _Db, Val) when Val =:= 0 ->
+do_noop(_Conn, _Db, Val) when Val =:= 0 ->
     ok;
-do_noop_inserts(Conn, Db, Val) ->
+do_noop(Conn, Db, Val) ->
     ll_generate(Val),
-    do_noop_inserts(Conn, Db, Val-1).
+    do_noop(Conn, Db, Val-1).
+
+do_async_spawn(_Conn, _Db, Val) when Val =:= 0 ->
+    ok;
+do_async_spawn(Conn, Db, Val) ->
+    spawn(fun() -> ok end),
+    do_async_spawn(Conn, Db, Val-1).
+
+do_sync_spawn(_Conn, _Db, Val) when Val =:= 0 ->
+    ok;
+do_sync_spawn(Conn, Db, Val) ->
+    Parent = self(),
+    Pid = spawn(fun() ->
+		  Parent ! {self(), done}
+	  end),
+    receive
+	{Pid, done} -> ok
+    end,
+    do_sync_spawn(Conn, Db, Val-1).
 
 do_compound_inserts(Conn, Db, Reps) ->
     {ok, ok} = mongo:do(safe, master, Conn, Db,
